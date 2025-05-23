@@ -74,23 +74,23 @@ class ToOrigin:
         # Input can be a list of .pssession files
         self.input = input
 
-        # # Functions and conditions set by originpro package
-        # def origin_shutdown_exception_hook(exctype, value, traceback):
-        #     '''Ensures Origin gets shut down if an uncaught exception'''
-        #     op.exit()
-        #     sys.__excepthook__(exctype, value, traceback)
-        #
-        # if op and op.oext:
-        #     sys.excepthook = origin_shutdown_exception_hook
-        #
-        # if op.oext:
-        #     op.set_show(True)
+        # Functions and conditions set by originpro package
+        def origin_shutdown_exception_hook(exctype, value, traceback):
+            '''Ensures Origin gets shut down if an uncaught exception'''
+            op.exit()
+            sys.__excepthook__(exctype, value, traceback)
+        
+        if op and op.oext:
+            sys.excepthook = origin_shutdown_exception_hook
+        
+        if op.oext:
+            op.set_show(True)
 
         # Asks the user to enter a filename for the Origin file
-        #filename = simpledialog.askstring(title = 'Choose a filename', prompt = 'Enter your filename:', initialvalue = 'iNANO #xxx')
+        filename = simpledialog.askstring(title = 'Choose a filename', prompt = 'Enter your filename:', initialvalue = 'iNANO #xxx')
         
-        # # Opens a new Origin project
-        # op.new()
+        # Opens a new Origin project
+        op.new()
 
         # Loops through each of the .pssession files
         for ix in self.input:
@@ -98,9 +98,9 @@ class ToOrigin:
             session = LoadSaveHelperFunctions.LoadSessionFile(ix)
   
             file = os.path.split(ix)[1][:-10] 
-            # pe.cd('Folder1') # how to rename?
-            # pe.mkdir(file)
-            # pe.cd(file)
+            pe.cd('Folder1') # how to rename?
+            pe.mkdir(file)
+            pe.cd(file)
 
             # Loops through each measurement object in the .pssession file
             for iy in session:
@@ -110,9 +110,9 @@ class ToOrigin:
                 marker = datetime(iy.TimeStamp.Year, iy.TimeStamp.Month, iy.TimeStamp.Day, iy.TimeStamp.Hour, iy.TimeStamp.Minute, iy.TimeStamp.Second)
 
                 format = '%Y-%m-%d - %X'
-                # wks = op.new_sheet('w', f'({marker.strftime(format)}) - {iy.Title}')
+                self.wks = op.new_sheet('w', f'({marker.strftime(format)}) - {iy.Title}')
                 
-                column = 0                                
+                self.column = 0                                
                 # Not sure how the index column is made in PSTrace, but this can be made here instead
                 index = np.arange(1, self.arrays[0].Count + 1, 1).tolist()
                 
@@ -120,7 +120,7 @@ class ToOrigin:
                 index.insert(0, 'Index')
 
                 # Assigns the index column to the first column in the worksheet
-                # wks.from_list(column, index)
+                self.wks.from_list(self.column, index)
                 
                 self.values = {}
                 self.channel_names = []
@@ -128,10 +128,12 @@ class ToOrigin:
                 for n in range(0, len(self.arrays)):
                     if self.arrays[n].Description != 'time':
                         self.channel_names.append(self.arrays[n].Description)
+                    
+                    
 
                 self.num_of_channels = len(self.channel_names)
 
-                if iy.Method.ToString() == 'Chronoamperometry':
+                if iy.Method.ToString()=='Chronoamperometry':
                     self.chronoamperometry_measurement_readout()
 
                     # if iy.Method.ToString() == 'Electrochemical Impedance Spectroscopy':
@@ -150,12 +152,15 @@ class ToOrigin:
                     #         wks.from_list(column, status)
                     #     except: pass
 
+                self.write_data_to_origin()
+                               
+
         # Save the Origin project after 
-        #op.save(os.path.join(os.getcwd(), 'origin') + rf'\{filename}.opju')
+        op.save(os.path.join(os.getcwd(), 'origin') + rf'\{filename}.opju')
 
         # Close the Origin project
-        # if op.oext:
-        #     op.exit()
+        if op.oext:
+            op.exit()
 
     def chronoamperometry_measurement_readout(self):
         for channel in self.channel_names:
@@ -202,9 +207,12 @@ class ToOrigin:
                     range_reading_info = Convert.ChangeType(iz.get_Item(n), CurrentReading)
                     self.values[f'{iz.Description}/i range'].append(str(range_reading_info.CurrentRange.ToString()))
                     self.values[f'{iz.Description}/i status'].append(
-                        str(range_reading_info.ReadingStatus.ToString()))
-
-                # wks.from_list(column, values)
+                        str(range_reading_info.ReadingStatus.ToString()))   
+                    
+    def write_data_to_origin(self):
+        for key in self.values:
+            self.column += 1
+            self.wks.from_list(self.column, self.values[key])       
 
 
 class ToText:
@@ -277,7 +285,7 @@ if __name__ == "__main__":
     start = time.time()  
 
     #exported = ToOrigin(filedialog.askopenfilenames())
-    exported = ToOrigin([r'input\one_session_NOT_ELAS_FULL_DATA.pssession'])
+    exported = ToOrigin([r'src\palmsensexporter\input\one_session_NOT_ELAS_FULL_DATA.pssession'])
 
     end = time.time()
-    print(f'The PalmSens file was split into  files in {end-start} seconds')
+    print(f'The PalmSens file was split into  files in {round(end-start, 2)} seconds')
