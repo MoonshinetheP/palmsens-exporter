@@ -74,23 +74,23 @@ class ToOrigin:
         # Input can be a list of .pssession files
         self.input = input
 
-        # Functions and conditions set by originpro package
-        def origin_shutdown_exception_hook(exctype, value, traceback):
-            '''Ensures Origin gets shut down if an uncaught exception'''
-            op.exit()
-            sys.__excepthook__(exctype, value, traceback)
-
-        if op and op.oext:
-            sys.excepthook = origin_shutdown_exception_hook
-
-        if op.oext:
-            op.set_show(True)
+        # # Functions and conditions set by originpro package
+        # def origin_shutdown_exception_hook(exctype, value, traceback):
+        #     '''Ensures Origin gets shut down if an uncaught exception'''
+        #     op.exit()
+        #     sys.__excepthook__(exctype, value, traceback)
+        #
+        # if op and op.oext:
+        #     sys.excepthook = origin_shutdown_exception_hook
+        #
+        # if op.oext:
+        #     op.set_show(True)
 
         # Asks the user to enter a filename for the Origin file
-        filename = simpledialog.askstring(title = 'Choose a filename', prompt = 'Enter your filename:', initialvalue = 'iNANO #xxx')
+        #filename = simpledialog.askstring(title = 'Choose a filename', prompt = 'Enter your filename:', initialvalue = 'iNANO #xxx')
         
-        # Opens a new Origin project
-        op.new()
+        # # Opens a new Origin project
+        # op.new()
 
         # Loops through each of the .pssession files
         for ix in self.input:
@@ -98,79 +98,113 @@ class ToOrigin:
             session = LoadSaveHelperFunctions.LoadSessionFile(ix)
   
             file = os.path.split(ix)[1][:-10] 
-            pe.cd('Folder1') # how to rename?
-            pe.mkdir(file)
-            pe.cd(file)
+            # pe.cd('Folder1') # how to rename?
+            # pe.mkdir(file)
+            # pe.cd(file)
 
             # Loops through each measurement object in the .pssession file
             for iy in session:
                 
-                arrays = iy.DataSet.GetDataArrays()
+                self.arrays = iy.DataSet.GetDataArrays()
 
                 marker = datetime(iy.TimeStamp.Year, iy.TimeStamp.Month, iy.TimeStamp.Day, iy.TimeStamp.Hour, iy.TimeStamp.Minute, iy.TimeStamp.Second)
 
-                wks = op.new_sheet('w', f'({marker.strftime('%Y-%m-%d - %X')}) - {iy.Title}')
+                format = '%Y-%m-%d - %X'
+                # wks = op.new_sheet('w', f'({marker.strftime(format)}) - {iy.Title}')
                 
                 column = 0                                
                 # Not sure how the index column is made in PSTrace, but this can be made here instead
-                index = np.arange(1, arrays[0].Count + 1, 1).tolist()
+                index = np.arange(1, self.arrays[0].Count + 1, 1).tolist()
                 
                 # Inserts the 'Index' string at the top of the array
                 index.insert(0, 'Index')
 
                 # Assigns the index column to the first column in the worksheet
-                wks.from_list(column, index)
+                # wks.from_list(column, index)
                 
-                values = {}
-                for n in range(0, len(arrays)):
-                    values.update({arrays[n].Description : []})
+                self.values = {}
+                self.channel_names = []
 
-                # Loops through each array in the measurement object
-                for iz in arrays:
-                    
-                    for n in range(0, iz.Count):
+                for n in range(0, len(self.arrays)):
+                    if self.arrays[n].Description != 'time':
+                        self.channel_names.append(self.arrays[n].Description)
 
-                        values[iz.Description].append(float(iz.get_Item(n).Value)) # need to know desription of current array
+                self.num_of_channels = len(self.channel_names)
 
-                        try:
-                            extra = Convert.ChangeType(iz.get_Item(n), VoltageReading)
-                            values[iz.Description].append(str(extra.Range.ToString())) # this won't work
-                            values[iz.Description].append(str(extra.ReadingStatus.ToString()))                        
-                        except: pass
-                        
-                        try:
-                            extra = Convert.ChangeType(iz.get_Item(n), CurrentReading)
-                            values[iz.Description].append(str(extra.CurrentRange.ToString()))
-                            values[iz.Description].append(str(extra.ReadingStatus.ToString()))
-                        except: pass
+                if iy.Method.ToString() == 'Chronoamperometry':
+                    self.chronoamperometry_measurement_readout()
 
-
-
-                    values.insert(0, f'{iz.Description}/{iz.Unit.ToString()}')
-                    wks.from_list(column, values)
-
-                    if iy.Method.ToString() == 'Electrochemical Impedance Spectroscopy':
-                        pass
-                    
-                    if iy.Method.ToString() == 'Electrochemical Impedance Spectroscopy':    
-                        pass  
-
-                    if (psdata.ArrayType(iz.ArrayType) == psdata.ArrayType.Potential) or (psdata.ArrayType(iz.ArrayType) == psdata.ArrayType.Current):
-                        try:
-                            ranges.insert(0, f'{iz.Description}/{iz.Unit.ToString()}')
-                            column += 1
-                            wks.from_list(column, ranges)
-                            status.insert(0, f'{iz.Description}/{iz.Unit.ToString()}')                        
-                            column += 1
-                            wks.from_list(column, status)
-                        except: pass
+                    # if iy.Method.ToString() == 'Electrochemical Impedance Spectroscopy':
+                    #     pass
+                    #
+                    # if iy.Method.ToString() == 'Electrochemical Impedance Spectroscopy':
+                    #     pass
+                    #
+                    # if (psdata.ArrayType(iz.ArrayType) == psdata.ArrayType.Potential) or (psdata.ArrayType(iz.ArrayType) == psdata.ArrayType.Current):
+                    #     try:
+                    #         ranges.insert(0, f'{iz.Description}/{iz.Unit.ToString()}')
+                    #         column += 1
+                    #         wks.from_list(column, ranges)
+                    #         status.insert(0, f'{iz.Description}/{iz.Unit.ToString()}')
+                    #         column += 1
+                    #         wks.from_list(column, status)
+                    #     except: pass
 
         # Save the Origin project after 
-        op.save(os.path.join(os.getcwd(), 'origin') + rf'\{filename}.opju')
+        #op.save(os.path.join(os.getcwd(), 'origin') + rf'\{filename}.opju')
 
         # Close the Origin project
-        if op.oext:
-            op.exit()
+        # if op.oext:
+        #     op.exit()
+
+    def chronoamperometry_measurement_readout(self):
+        for channel in self.channel_names:
+            self.values.update({f'{channel}/E range': [f'{channel}/E range']})
+            self.values.update({f'{channel}/E status': [f'{channel}/E status']})
+            self.values.update({f'{channel}/i range': [f'{channel}/i range']})
+            self.values.update({f'{channel}/i status': [f'{channel}/i status']})
+
+        voltage_arrays_num = 0
+        current_arrays_num = 0
+        capacity_arrays_num = 0
+        time_array_present = False
+
+        # Loops through each array in the measurement object
+        for iz in self.arrays:
+            unit = iz.Unit.ToString()
+            if voltage_arrays_num != self.num_of_channels and ('V' in unit):
+                self.values.update({f'{iz.Description}/{unit}': [f'{iz.Description}/{unit}']})
+                voltage_arrays_num += 1
+
+            if current_arrays_num != self.num_of_channels and ('A' in unit):
+                self.values.update({f'{iz.Description}/{unit}': [f'{iz.Description}/{unit}']})
+                current_arrays_num += 1
+
+            if capacity_arrays_num != self.num_of_channels and ('C' in unit):
+                self.values.update({f'{iz.Description}/{unit}': [f'{iz.Description}/{unit}']})
+                capacity_arrays_num += 1
+
+            if not time_array_present and ('s' in unit):
+                self.values.update({f'{iz.Description}/{unit}': [f'{iz.Description}/{unit}']})
+                time_array_present = True
+
+            for n in range(0, iz.Count):
+
+                self.values[f'{iz.Description}/{unit}'].append(float(iz.get_Item(n).Value))
+
+                if 'V' in unit:
+                    range_reading_info = Convert.ChangeType(iz.get_Item(n), VoltageReading)
+                    self.values[f'{iz.Description}/E range'].append(str(range_reading_info.Range.ToString()))
+                    self.values[f'{iz.Description}/E status'].append(
+                        str(range_reading_info.ReadingStatus.ToString()))
+
+                elif 'A' in unit:
+                    range_reading_info = Convert.ChangeType(iz.get_Item(n), CurrentReading)
+                    self.values[f'{iz.Description}/i range'].append(str(range_reading_info.CurrentRange.ToString()))
+                    self.values[f'{iz.Description}/i status'].append(
+                        str(range_reading_info.ReadingStatus.ToString()))
+
+                # wks.from_list(column, values)
 
 
 class ToText:
@@ -242,7 +276,8 @@ if __name__ == "__main__":
 
     start = time.time()  
 
-    exported = ToOrigin(filedialog.askopenfilenames())
+    #exported = ToOrigin(filedialog.askopenfilenames())
+    exported = ToOrigin([r'input\one_session_NOT_ELAS_FULL_DATA.pssession'])
 
     end = time.time()
     print(f'The PalmSens file was split into  files in {end-start} seconds')
